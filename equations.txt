@@ -1,0 +1,15 @@
+Certain Rules:
+1. The reactants and products should be seperated by '->'
+2. All the compounds must be seperated using '+'
+
+The following are some sample equations:
+
+Pb3(VO4)2.PbCl2 + HCl -> VO2Cl + PbCl2 + H2O
+Fe2(SO4)3 + Ba(NO3)2 -> BaSO4 + Fe(NO3)3
+Al2(SO3)3 + NaOH -> Na2SO3 + Al(OH)3 
+FeSO4 + K3Fe(CN)6 -> Fe3Fe2(CN)12 + K2SO4
+H3PO4 + (NH4)2MoO4 + HNO3 + H2O -> (NH4)3PO4.12MoO3 + NH4NO3
+PHCH3 + KMnO4 + H2SO4 -> PHCOOH + K2SO4 + MnSO4 + H2O
+K4Fe(CN)6 + H2SO4 + H2O -> K2SO4 + FeSO4 + (NH4)2SO4 + CO
+Cu + HNO3 -> Cu(NO3)2 + NO + H2O
+HIO3 + FeI2 + HCl -> FeCl3 + ICl + H2O

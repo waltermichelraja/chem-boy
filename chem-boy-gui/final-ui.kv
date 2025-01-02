@@ -1,0 +1,49 @@
+#:import NoTransition kivy.uix.screenmanager.NoTransition
+
+WindowManager:
+    transition: NoTransition()
+    MainMenu:
+
+<MainMenu>:
+    name: "MainMenu"
+    BoxLayout:
+        orientation: "vertical"
+        halign: "center"
+
+        AnchorLayout:
+            anchor_x: 'center'
+            anchor_y: 'top'
+            MDToolbar:
+                title: "Equation Balancer - By Pranjal Agrawal"
+                md_bg_color: app.theme_cls.primary_color
+
+        FloatLayout:
+            MDTextFieldRound:
+                id: equation_text
+                pos_hint: {"center_y": 0.5, "center_x": 0.5}
+                icon_type: 'without'
+                width: root.width - dp(30)
+                hint_text: 'Enter Equation Here'
+                hint_text_color: [1, 0, 0, 1]
+                foreground_color: [1, 0, 0, 1]
+                normal_color: [0, 0, 0, .1]
+
+        FloatLayout:
+            MDFillRoundFlatButton:
+                text: '     Balance     '
+                pos_hint: {"center_y": 0.8, 'center_x': 0.5}
+                on_release: app.balanced_equation = app.setEquation(root.ids.equation_text.text)
+        FloatLayout:
+            Label:
+                id: balanced_eq
+                pos_hint: {"center_y": 1.25, "x": 0}
+                color: 1, 0, 0, 1
+                markup: True
+                text: app.balanced_equation
+                size_hint_y: None
+                height: self.texture_size[1]
+                text_size: self.width, None
+                font_size: dp(22)
+
+                halign: 'center'
+                valign: 'middle'
