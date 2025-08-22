@@ -1,132 +1,110 @@
 from sympy import *
-init_printing(use_unicode=True)
 import math
 import re
-#author-walter
-equation = str(input("Enter the equation: \n"))
-equation = equation.replace("->", "+").replace(" ", "")
+
+# author: Walter
+init_printing(use_unicode=True)
+
+equation = input("Enter the equation (use -> between reactants and products): \n").replace(" ", "")
+
+# --- Utility Functions ---
+
+def subscript(s: str) -> str:
+    """Convert digits to Unicode subscript for pretty display."""
+    return "".join(chr(int(ch) + 8320) if ch.isdigit() else ch for ch in s)
 
 
-def subscript(s):  # Function to convert number to subscript. 8320 is the ascii of subscript 0
-    for i in range(1, len(s)):
-        if s[i].isdigit() and (s[i - 1].isalpha() or s[i - 1] == ")" or ord(s[i - 1]) in range(8320, 8340)):
-            s = s[0:i] + s[i].replace(s[i], chr(int(s[i]) + 8320)) + s[i + 1:]
-    return s
-
-
-# Function to format the molecular formula to make it suitable for the program to work with
-def format_compound(formula):
+def format_compound(formula: str) -> str:
+    """Insert implicit '1's into molecular formulas for parsing."""
     f_formula = ""
-    for part in formula.split("."):
-        for i in range(0, len(part)):
-            if i + 1 < len(part):
-                if part[i].isalpha() and (part[i + 1].isupper() or part[i + 1] in ["(", "[", ")", "]"]):
-                    f_formula += part[i] + "1"
-                elif part[i] in [")", "]"] and part[i + 1].isalpha():
-                    f_formula += part[i] + "1"
-                else:
-                    f_formula += part[i]
+    for i in range(len(formula)):
+        if i + 1 < len(formula):
+            if formula[i].isalpha() and (formula[i + 1].isupper() or formula[i + 1] in "([)]"):
+                f_formula += formula[i] + "1"
+            elif formula[i] in ")]" and formula[i + 1].isalpha():
+                f_formula += formula[i] + "1"
             else:
-                if part[i].isalpha() or part[i] in [")", "]"]:
-                    f_formula += part[i] + "1"
-                else:
-                    f_formula += part[i]
-        f_formula += ("." if len(formula.split(".")) > 1 else "")
-    if f_formula.find(".") > -1:
-        part = f_formula.split(".")
-        val = str(re.findall('[0-9][0-9]*', part[1])[0])
-        val = ("1" if val == "" else val)
-        f_formula = part[0] + \
-            "(" + str(re.findall('[A-Za-z]\S*', part[1])[0]) + ")" + val
+                f_formula += formula[i]
+        else:
+            f_formula += formula[i] + ("1" if formula[i].isalpha() or formula[i] in ")]" else "")
     return f_formula
 
 
-def open_brackets(formula):  # Function to open the brackets
-    formula_br = re.findall('\((.*?)\)', formula)
-    m = re.findall('\)([0-9][0-9]*)', formula)
-    for (i, indexc) in zip(formula_br, range(0, len(formula_br))):
-        f_formula = ""
-        val = re.findall('[0-9][0-9]*', i)
-        for (n, indexv) in zip(val, range(0, len(val))):
-            f_formula += re.findall('([A-Za-z][A-Za-z]*)', i)[indexv]
-            f_formula += str(int(n) * int(m[indexc]))
-        formula = formula.replace(re.findall(
-            '(\(.*?\)[0-9]*)', formula)[0], f_formula)
+def open_brackets(formula: str) -> str:
+    """Expand formulas with parentheses, e.g., Ca(OH)2 -> Ca1O2H2."""
+    while "(" in formula or ")" in formula:
+        match = re.search(r"\(([A-Za-z0-9]+)\)(\d+)", formula)
+        if not match:
+            break
+        inside, mult = match.groups()
+        expanded = ""
+        for elem, count in zip(re.findall(r"[A-Z][a-z]*", inside), re.findall(r"\d+", inside)):
+            expanded += elem + str(int(count) * int(mult))
+        formula = formula.replace(match.group(0), expanded, 1)
     return formula
 
 
-def simplify(formula):  # Function to simplify the molecular formula by using the above functions
+def simplify(formula: str) -> str:
+    """Fully simplify molecular formula."""
     formula = format_compound(formula)
-    formula = open_brackets(formula)
-    formula = formula.replace("[", "(").replace("]", ")")
-    formula = open_brackets(formula)
+    formula = open_brackets(formula.replace("[", "(").replace("]", ")"))
     return formula
 
 
-all_elements = list()  # A list of all the elements in the list
+# --- Data Structures ---
+
+all_elements = []
+
+class Compound:
+    """Represents a chemical compound with element counts."""
+    def __init__(self, formula: str):
+        self.compound_n = formula
+        self.compound_f = simplify(formula)
+        self.elements = {}
+        for elem, val in zip(re.findall(r"[A-Z][a-z]*", self.compound_f), re.findall(r"\d+", self.compound_f)):
+            self.elements[elem] = self.elements.get(elem, 0) + int(val)
+            if elem not in all_elements:
+                all_elements.append(elem)
 
 
-class compound(object):  # A class of compounds. I contains all the attributes of each compound
-    def __init__(self, compound_n):
-        self.compound_n = compound_n  # It stores the original molecular formula
-        # It stores the simplified molecular formula
-        self.compound_f = simplify(self.compound_n)
-        # Dict containing all the elements and number of atoms of each element
-        self.elements = dict()
-        for (val, element) in zip(re.findall('[0-9][0-9]*', self.compound_f), re.findall('[A-Za-z][A-Za-z]*', self.compound_f)):
-            self.elements[element] = str(
-                int(self.elements.get(element, "0")) + int(val))
-            if element not in all_elements:
-                all_elements.append(element)
+# --- Parse Input ---
+lhs, rhs = equation.split("->")
+compounds = [Compound(f) for f in lhs.split("+")] + [Compound(f) for f in rhs.split("+")]
 
+cols, rows = len(compounds), len(all_elements)
+m = zeros(rows, cols)
 
-compounds = []  # A list of objects of the class 'compound'
-for compound_n in equation.split("+"):
-    compounds.append(compound(compound_n))
+for c in range(cols):
+    for r in range(rows):
+        m[r, c] = compounds[c].elements.get(all_elements[r], 0) * (1 if c < len(lhs.split("+")) else -1)
 
-cols = len(compounds)
-rows = len(all_elements)
-m = (zeros(rows, cols))  # Matrix which solves the system of linear equations
+# --- Solve System ---
+m_rref, _ = m.rref()
+coeffs = []
+denoms = []
 
-for c in range(0, int(cols)):  # Inserting the values into the matrix
-    for r in range(0, int(rows)):
-        try:
-            m[r, c] = compounds[c].elements[all_elements[r]]
-        except:
-            m[r, c] = 0
+for val in m_rref[:, -1]:
+    num, den = val.as_numer_denom()
+    coeffs.append(int(num))
+    denoms.append(int(den))
 
-print("\nRREF Matrix: \n", m.rref(), "\n")
-# Converting the matrix to RREF form and removing the list of pivots
-m = list(m.rref())[0]
+coeffs.append(1)
+denoms.append(1)
 
-coefficients = list()
-denominator = list()
+# scale to integers
+lcm = denoms[0]
+for d in denoms[1:]:
+    lcm = lcm * d // math.gcd(lcm, d)
 
-for r in range(0, rows):  # Storing the coefficints in the lists
-    if m[r, cols - 1] == 0:
-        break
-    else:
-        coefficients.append(int(str(m[r, cols - 1]).split("/")[0]))
-        try:
-            denominator.append(int(str(m[r, cols - 1]).split("/")[1]))
-        except:
-            denominator.append(1)
-coefficients.append(1)
-denominator.append(1)
+coeffs = [c * (lcm // d) for c, d in zip(coeffs, denoms)]
 
-lcm = denominator[0]
-for num in denominator[1:]:  # Calculating the lcm of the denominators
-    lcm = int(int(lcm * num) / int(math.gcd(lcm, num)))
+# --- Construct Balanced Equation ---
+balanced = ""
+for i, cmpd in enumerate(compounds):
+    balanced += (str(coeffs[i]) if coeffs[i] > 1 else "") + cmpd.compound_n
+    if i + 1 == len(lhs.split("+")):
+        balanced += " → "
+    elif i < len(compounds) - 1:
+        balanced += " + "
 
-rhs = False
-equation = ""
-for i in range(0, len(compounds)):  # Concatenating the coefficients and the molecular formula
-    coefficients[i] = int(coefficients[i] / denominator[i] * lcm)
-    if coefficients[i] < 1 and rhs == false:
-        equation = equation.strip()[:-2].strip() + " \u2794 "
-        rhs = True
-    equation += (str(abs(coefficients[i])) if abs(coefficients[i]) > 1 else "")
-    equation += compounds[i].compound_n + \
-        (" + " if i < len(compounds) - 1 else "")
-
-print("the balanced equation is : \n" + subscript(equation))
+print("\nBalanced equation:\n" + subscript(balanced))
